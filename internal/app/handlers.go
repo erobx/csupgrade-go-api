@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/erobx/csupgrade/backend/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
@@ -35,10 +35,10 @@ func (s *Server) register() fiber.Handler {
 		}
 
 		claims := jwt.MapClaims{
-			"id": userID,
-			"email": user.Email,
+			"id":                  userID,
+			"email":               user.Email,
 			"refreshTokenVersion": user.RefreshTokenVersion,
-			"exp": time.Now().Add(time.Hour * 23).Unix(),
+			"exp":                 time.Now().Add(time.Hour * 23).Unix(),
 		}
 
 		t, err := s.issueNewToken(claims)
@@ -49,7 +49,7 @@ func (s *Server) register() fiber.Handler {
 
 		return c.JSON(fiber.Map{
 			"user": user,
-			"jwt": t,
+			"jwt":  t,
 		})
 	}
 }
@@ -62,7 +62,7 @@ func (s *Server) login() fiber.Handler {
 			log.Println(err)
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
-		
+
 		user, inv, err := s.userService.Login(newLoginRequest)
 		if err != nil {
 			log.Println(err)
@@ -70,10 +70,10 @@ func (s *Server) login() fiber.Handler {
 		}
 
 		claims := jwt.MapClaims{
-			"id": user.ID,
-			"email": user.Email,
+			"id":                  user.ID,
+			"email":               user.Email,
 			"refreshTokenVersion": user.RefreshTokenVersion,
-			"exp": time.Now().Add(time.Hour * 23).Unix(),
+			"exp":                 time.Now().Add(time.Hour * 23).Unix(),
 		}
 
 		t, err := s.issueNewToken(claims)
@@ -83,9 +83,9 @@ func (s *Server) login() fiber.Handler {
 		}
 
 		return c.JSON(fiber.Map{
-			"user": user,
+			"user":      user,
 			"inventory": inv,
-			"jwt": t,
+			"jwt":       t,
 		})
 	}
 }
@@ -108,25 +108,25 @@ func (s *Server) getUser() fiber.Handler {
 }
 
 func (s *Server) getInventory() fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        userID := c.Query("userId")
+	return func(c *fiber.Ctx) error {
+		userID := c.Query("userId")
 		jwtUserID := GetUserIDFromClaims(c)
-		
+
 		err := s.validator.ValidateUserID(userID, jwtUserID)
 		if err != nil {
 			log.Println(err)
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
 
-        log.Printf("Requesting inventory for %s\n", userID)
+		log.Printf("Requesting inventory for %s\n", userID)
 
-        inventory, err := s.userService.GetInventory(userID)
+		inventory, err := s.userService.GetInventory(userID)
 		if err != nil {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
-        return c.JSON(inventory)
-    }
+		return c.JSON(inventory)
+	}
 }
 
 func (s *Server) getRecentTradeups() fiber.Handler {
@@ -160,13 +160,13 @@ func (s *Server) buyCrate() fiber.Handler {
 		amount, _ := strconv.Atoi(c.Query("amount"))
 
 		jwtUserID := GetUserIDFromClaims(c)
-		
+
 		err := s.validator.ValidateUserID(userID, jwtUserID)
 		if err != nil {
 			log.Println(err)
 			return c.SendStatus(fiber.StatusUnauthorized)
 		}
-		
+
 		log.Printf("User %s buying crate %s - %d\n", userID, crateID, amount)
 		updatedBalance, addedItems, err := s.storeService.BuyCrate(crateID, userID, amount)
 		if err != nil {
@@ -176,7 +176,7 @@ func (s *Server) buyCrate() fiber.Handler {
 
 		return c.JSON(fiber.Map{
 			"balance": updatedBalance,
-			"items": addedItems,
+			"items":   addedItems,
 		})
 	}
 }
@@ -218,40 +218,40 @@ func (s *Server) removeSkinFromTradeup() fiber.Handler {
 }
 
 func (s *Server) handleWebSocket(c *websocket.Conn) {
-    userID := c.Query("userId")
+	userID := c.Query("userId")
 
-    sessionID := ""
-    if userID == "" {
-        sessionID = uuid.NewString()
-        userID = sessionID
-    }
+	sessionID := ""
+	if userID == "" {
+		sessionID = uuid.NewString()
+		userID = sessionID
+	}
 
-    client := &Client{
-        Conn: c,
-        UserID: userID,
-        SessionID: sessionID,
-        SubscribedAll: false,
-        SubscribedID: "",
-    }
+	client := &Client{
+		Conn:          c,
+		UserID:        userID,
+		SessionID:     sessionID,
+		SubscribedAll: false,
+		SubscribedID:  "",
+	}
 
-    s.Lock()
-    s.clients[userID] = client
-    s.Unlock()
+	s.Lock()
+	s.clients[userID] = client
+	s.Unlock()
 
-    defer func() {
-        s.Lock()
-        delete(s.clients, userID)
-        s.Unlock()
-        c.Close()
-    }()
+	defer func() {
+		s.Lock()
+		delete(s.clients, userID)
+		s.Unlock()
+		c.Close()
+	}()
 
-    for {
-        _, msg, err := c.ReadMessage()
-        if err != nil {
-            log.Println("WebSocket closed for", userID, ":", err)
-            break
-        }
+	for {
+		_, msg, err := c.ReadMessage()
+		if err != nil {
+			log.Println("WebSocket closed for", userID, ":", err)
+			break
+		}
 
-        s.handleSubscription(userID, msg)
-    }
+		s.handleSubscription(userID, msg)
+	}
 }

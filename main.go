@@ -9,10 +9,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/erobx/csupgrade/backend/internal/app"
-	"github.com/erobx/csupgrade/backend/pkg/api"
-	"github.com/erobx/csupgrade/backend/pkg/db"
-	"github.com/erobx/csupgrade/backend/pkg/repository"
+	"github.com/erobx/csupgrade-go-api/internal/app"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/db"
+	"github.com/erobx/csupgrade-go-api/pkg/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 )

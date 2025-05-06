@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/erobx/csupgrade/backend/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
 )
 
 // Should register a new user and return their data + jwt

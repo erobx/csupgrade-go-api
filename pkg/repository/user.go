@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/erobx/csupgrade/backend/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -30,7 +30,7 @@ func (s *storage) GetUserByID(userID string) (api.User, error) {
 	q := "select id,username,email,balance,refresh_token_version,avatar_key,created_at from users where id=$1"
 	row := s.db.QueryRow(context.Background(), q, userID)
 	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Balance,
-			&user.RefreshTokenVersion, &avatarKey, &user.CreatedAt)
+		&user.RefreshTokenVersion, &avatarKey, &user.CreatedAt)
 
 	// TODO: generate url for avatarKey, then assign to user.AvatarSrc
 
@@ -45,7 +45,7 @@ func (s *storage) GetUserAndHashByEmail(email string) (api.User, string, error) 
 	q := "select * from users where email=$1"
 	row := s.db.QueryRow(context.Background(), q, email)
 	err := row.Scan(&user.ID, &user.Username, &user.Email, &hash, &user.Balance,
-			&user.RefreshTokenVersion, &avatarKey, &user.CreatedAt)
+		&user.RefreshTokenVersion, &avatarKey, &user.CreatedAt)
 
 	// TODO: generate url for avatarKey, then assign to user.AvatarSrc
 
@@ -55,7 +55,7 @@ func (s *storage) GetUserAndHashByEmail(email string) (api.User, string, error) 
 func (s *storage) GetInventory(userID string) (api.Inventory, error) {
 	inventory := api.Inventory{
 		UserID: userID,
-		Items: make([]api.Item, 0),
+		Items:  make([]api.Item, 0),
 	}
 
 	q := `
@@ -77,8 +77,8 @@ func (s *storage) GetInventory(userID string) (api.Inventory, error) {
 		var imageKey string
 
 		err := rows.Scan(&item.InvID, &skin.ID, &skin.Wear, &skin.Float, &skin.Price,
-						&skin.IsStatTrak, &skin.WasWon, &skin.CreatedAt, &item.Visible,
-						&skin.Name, &skin.Rarity, &skin.Collection, &imageKey)
+			&skin.IsStatTrak, &skin.WasWon, &skin.CreatedAt, &item.Visible,
+			&skin.Name, &skin.Rarity, &skin.Collection, &imageKey)
 		if err != nil {
 			return inventory, err
 		}
@@ -159,8 +159,7 @@ func (s *storage) GetRecentTradeups(userID string) ([]api.RecentTradeup, error) 
 		var itemsJSON string
 
 		if err := rows.Scan(
-			&t.ID, &t.Rarity, &t.Status, &t.Mode, &t.LastEntered, &itemsJSON);
-		err != nil {
+			&t.ID, &t.Rarity, &t.Status, &t.Mode, &t.LastEntered, &itemsJSON); err != nil {
 			return recentTradeups, err
 		}
 
@@ -175,8 +174,6 @@ func (s *storage) GetRecentTradeups(userID string) ([]api.RecentTradeup, error) 
 
 func (s *storage) GetRecentWinnings(userID string) ([]api.Item, error) {
 	var winnings []api.Item
-
-
 
 	return winnings, nil
 }

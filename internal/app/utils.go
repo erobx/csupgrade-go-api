@@ -3,7 +3,7 @@ package app
 import (
 	"reflect"
 
-	"github.com/erobx/csupgrade/backend/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )

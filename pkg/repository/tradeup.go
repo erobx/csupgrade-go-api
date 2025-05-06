@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"math/rand/v2"
 
-	"github.com/erobx/csupgrade/backend/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -26,7 +26,7 @@ func (s *storage) GetAllTradeups() ([]api.Tradeup, error) {
 		if err != nil {
 			return tradeups, err
 		}
-		
+
 		ids = append(ids, id)
 	}
 
@@ -98,8 +98,8 @@ func (s *storage) GetTradeupByID(tradeupID string) (api.Tradeup, error) {
 		var imageKey string
 
 		err := rows.Scan(&item.InvID, &player.ID, &skin.ID, &skin.Wear, &skin.Float, &skin.Price,
-						&skin.IsStatTrak, &skin.CreatedAt, &player.Username, &player.Email, 
-						&player.Balance, &avatarKey, &skin.Name, &skin.Rarity, &skin.Collection, &imageKey)
+			&skin.IsStatTrak, &skin.CreatedAt, &player.Username, &player.Email,
+			&player.Balance, &avatarKey, &skin.Name, &skin.Rarity, &skin.Collection, &imageKey)
 		if err != nil {
 			tx.Rollback(context.Background())
 			return tradeup, err
@@ -321,16 +321,16 @@ func (s *storage) DetermineWinner(tradeupID int) (string, error) {
 	}
 
 	var winner string
-    randomNum := rand.IntN(100)
-    currWeight := 0
-    
-    for player, weight := range playerWeights {
-        currWeight += weight * 10
-        if randomNum < currWeight {
-            winner = player
-            break
-        }
-    }
+	randomNum := rand.IntN(100)
+	currWeight := 0
+
+	for player, weight := range playerWeights {
+		currWeight += weight * 10
+		if randomNum < currWeight {
+			winner = player
+			break
+		}
+	}
 
 	q = `update tradeups set current_status='Completed', winner=$1 where id=$2`
 	_, err = tx.Exec(context.Background(), q, winner, tradeupID)
@@ -371,33 +371,33 @@ func (s *storage) GiveNewItem(userID, rarity string, avgFloat float64) (api.Item
 		tx.Commit(context.Background())
 	}()
 
-    q := "select id,name,rarity,collection,wear_min,wear_max,can_be_stattrak,image_key from skins where rarity=$1 order by random() limit 1"
-    err = tx.QueryRow(context.Background(), q, rarity).Scan(&skin.ID, &skin.Name,
-						&skin.Rarity, &skin.Collection, &wearMin, &wearMax, &canBeStatTrak, &imageKey)
-    if err != nil {
-        return item, err
-    }
+	q := "select id,name,rarity,collection,wear_min,wear_max,can_be_stattrak,image_key from skins where rarity=$1 order by random() limit 1"
+	err = tx.QueryRow(context.Background(), q, rarity).Scan(&skin.ID, &skin.Name,
+		&skin.Rarity, &skin.Collection, &wearMin, &wearMax, &canBeStatTrak, &imageKey)
+	if err != nil {
+		return item, err
+	}
 
-    wearNum := ((wearMax - wearMin) * avgFloat) + wearMin
-    wearStr := api.GetWearNameFromFloat(wearNum)
+	wearNum := ((wearMax - wearMin) * avgFloat) + wearMin
+	wearStr := api.GetWearNameFromFloat(wearNum)
 	isStatTrak := false
 	if canBeStatTrak {
 		isStatTrak = api.IsStatTrak()
 	}
 
-    q = `
+	q = `
     insert into inventory(user_id, skin_id, wear_str, wear_num, price, is_stattrak, was_won)
 	values ($1,$2,$3,$4,12.34,$5,true) 
 	returning id,wear_str,wear_num,price,is_stattrak,was_won,created_at
     `
 
-    err = tx.QueryRow(context.Background(), q, userID, skin.ID, wearStr, wearNum, 
-		isStatTrak).Scan(&item.InvID, &skin.Wear, &skin.Float, &skin.Price, &skin.IsStatTrak, 
-						&skin.WasWon, &skin.CreatedAt)
-    if err != nil {
+	err = tx.QueryRow(context.Background(), q, userID, skin.ID, wearStr, wearNum,
+		isStatTrak).Scan(&item.InvID, &skin.Wear, &skin.Float, &skin.Price, &skin.IsStatTrak,
+		&skin.WasWon, &skin.CreatedAt)
+	if err != nil {
 		tx.Rollback(context.Background())
-        return item, err
-    }
+		return item, err
+	}
 
 	skin.ImgSrc = s.createImgSrc(imageKey)
 	item.Data = skin
@@ -412,23 +412,23 @@ func (s *storage) MaintainTradeupCount() error {
 	if err != nil {
 		return err
 	}
-    
-    for _, r := range rarities {
+
+	for _, r := range rarities {
 		count := 0
-        q := "select count(*) from tradeups where rarity=$1 and current_status in ('Active', 'Waiting')"
-        if err := tx.QueryRow(context.Background(), q, r).Scan(&count); err != nil {
+		q := "select count(*) from tradeups where rarity=$1 and current_status in ('Active', 'Waiting')"
+		if err := tx.QueryRow(context.Background(), q, r).Scan(&count); err != nil {
 			return err
-        }
-        
-        if count < 5 {
+		}
+
+		if count < 5 {
 			q := "insert into tradeups(rarity) values($1)"
 			_, err := tx.Exec(context.Background(), q, r)
 			if err != nil {
 				tx.Rollback(context.Background())
 				return err
 			}
-        }
-    }
+		}
+	}
 
 	tx.Commit(context.Background())
 	return nil

@@ -7,7 +7,7 @@ import (
 	"math/rand/v2"
 	"strings"
 
-	"github.com/erobx/csupgrade/backend/pkg/api"
+	"github.com/erobx/csupgrade-go-api/pkg/api"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -24,7 +24,7 @@ type Storage interface {
 
 	// Store
 	BuyCrate(crateID, userID string, amount int) (float64, []api.Item, error)
-	
+
 	// Tradeups
 	GetAllTradeups() ([]api.Tradeup, error)
 	GetTradeupByID(tradeupID string) (api.Tradeup, error)
@@ -46,7 +46,7 @@ type Storage interface {
 }
 
 type storage struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
 	cdnUrl string
 }
 
@@ -65,7 +65,7 @@ func (s *storage) BuyCrate(crateID, userID string, amount int) (float64, []api.I
 	defer func() {
 		tx.Commit(context.Background())
 	}()
-	
+
 	q := `
 	with updated as (
 		update users
@@ -138,9 +138,9 @@ func (s *storage) BuyCrate(crateID, userID string, amount int) (float64, []api.I
 		join skins s on s.id = item.skin_id
 		`
 		row := tx.QueryRow(context.Background(), q, userID, skinID, wear, floatValue, isStatTrak)
-		err = row.Scan(&item.InvID, &skin.ID, &skin.Wear, &skin.Float, &skin.Price, 
-					&skin.IsStatTrak, &skin.WasWon, &skin.CreatedAt, &item.Visible, &skin.Name, 
-					&skin.Rarity, &skin.Collection, &imageKey)
+		err = row.Scan(&item.InvID, &skin.ID, &skin.Wear, &skin.Float, &skin.Price,
+			&skin.IsStatTrak, &skin.WasWon, &skin.CreatedAt, &item.Visible, &skin.Name,
+			&skin.Rarity, &skin.Collection, &imageKey)
 
 		if err != nil {
 			log.Println("Failed scanning item")
