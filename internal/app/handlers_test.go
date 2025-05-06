@@ -14,7 +14,7 @@ import (
 func TestRegister(t *testing.T) {
 	t.Run("registers new user", func(t *testing.T) {
 		payload := api.NewUserRequest{
-			Email: "test@test.com",
+			Email:    "test@test.com",
 			Username: "testing",
 			Password: "test",
 		}
@@ -23,5 +23,5 @@ func TestRegister(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "/auth/register", reader)
 		response := httptest.NewRecorder()
 
-	}
+	})
 }

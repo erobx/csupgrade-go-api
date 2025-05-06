@@ -13,13 +13,13 @@ import (
 )
 
 func (s *Server) UseMiddleware() {
-    s.app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:5173",
-        AllowCredentials: true,
-        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-        AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
-		ExposeHeaders: "X-New-Token",
-    }))
+	s.app.Use(cors.New(cors.Config{
+		AllowOrigins:     "https://csupgrade.ebob.dev",
+		AllowCredentials: true,
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
+		ExposeHeaders:    "X-New-Token",
+	}))
 
 	s.app.Use("/ws", func(c *fiber.Ctx) error {
 		if websocket.IsWebSocketUpgrade(c) {
@@ -34,14 +34,14 @@ func (s *Server) Protect() {
 	s.app.Use(jwtware.New(jwtware.Config{
 		SigningKey: jwtware.SigningKey{
 			JWTAlg: jwtware.RS256,
-			Key: s.privateKey.Public(),
+			Key:    s.privateKey.Public(),
 		},
 		ErrorHandler: s.InvalidJWT(),
 	}))
 }
 
 func (s *Server) InvalidJWT() fiber.ErrorHandler {
-	return func (c *fiber.Ctx, err error) error {
+	return func(c *fiber.Ctx, err error) error {
 		// Only handle JWT errors
 		if err == nil || !strings.Contains(err.Error(), "token is expired") {
 			return fiber.ErrUnauthorized
@@ -74,7 +74,7 @@ func (s *Server) InvalidJWT() fiber.ErrorHandler {
 		log.Printf("issued new token for %s\n", claims["id"].(string))
 
 		// Optional: continue to next middleware/handler
-		// return c.Next() 
+		// return c.Next()
 		// But Fiber JWT middleware doesn't allow continuing after error, so:
 		return c.Status(fiber.StatusUnauthorized).SendString("Token expired, issued new token")
 	}
@@ -82,10 +82,10 @@ func (s *Server) InvalidJWT() fiber.ErrorHandler {
 
 func (s *Server) issueNewToken(claims jwt.MapClaims) (string, error) {
 	newClaims := jwt.MapClaims{
-		"id":                   claims["id"],
-		"email":                claims["email"],
+		"id":                  claims["id"],
+		"email":               claims["email"],
 		"refreshTokenVersion": claims["refreshTokenVersion"],
-		"exp":                  time.Now().Add(23 * time.Hour).Unix(),
+		"exp":                 time.Now().Add(23 * time.Hour).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, newClaims)

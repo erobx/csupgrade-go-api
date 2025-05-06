@@ -8,7 +8,7 @@ import (
 )
 
 func CreateConnection() (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(context.Background(), os.Getenv("LOCAL_DB_URL"))
+	pool, err := pgxpool.New(context.Background(), os.Getenv("NEON_URL"))
 	if err != nil {
 		return nil, err
 	}

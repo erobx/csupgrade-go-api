@@ -9,9 +9,7 @@ type Validator interface {
 	ValidateUserID(userID, jwtUserID string) error
 }
 
-type validator struct {
-
-}
+type validator struct{}
 
 func NewValidator() Validator {
 	return &validator{}
