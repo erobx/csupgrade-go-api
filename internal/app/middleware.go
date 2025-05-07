@@ -14,7 +14,7 @@ import (
 
 func (s *Server) UseMiddleware() {
 	s.app.Use(cors.New(cors.Config{
-		AllowOrigins:     "https://csupgrade.ebob.dev, http://localhost:5173, http://10.0.0.28:5173",
+		AllowOrigins:     "https://csupgrade.ebob.dev",
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
