@@ -14,15 +14,9 @@ import (
 	"github.com/erobx/csupgrade-go-api/pkg/db"
 	"github.com/erobx/csupgrade-go-api/pkg/repository"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	db, err := db.CreateConnection()
 	if err != nil {
 		log.Fatal(err)

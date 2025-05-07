@@ -1,13 +1,15 @@
-# fly.toml app configuration file generated for csupgrade-go-api on 2025-05-06T17:02:19-04:00
+# fly.toml app configuration file generated for csupgrade-go-api on 2025-05-06T18:15:41-04:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
 app = 'csupgrade-go-api'
+kill_signal = "SIGINT"
+kill_timeout = 15
 primary_region = 'mia'
 
 [build]
-  dockerfile = 'Dockerfile'
+  dockerfile = './Dockerfile'
   build-target = 'prod'
 
 [http_service]

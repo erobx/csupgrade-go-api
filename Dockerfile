@@ -3,7 +3,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o csupgrade-api /app/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o csupgrade-api ./main.go
 
 FROM scratch AS prod
 WORKDIR /app

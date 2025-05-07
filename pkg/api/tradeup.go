@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"time"
-	
 )
 
 type TradeupService interface {
@@ -35,16 +34,16 @@ type TradeupRepository interface {
 }
 
 type tradeupService struct {
-	storage 	TradeupRepository
-	winnings 	chan Winnings
-	logger		LogService
+	storage  TradeupRepository
+	winnings chan Winnings
+	logger   LogService
 }
 
 func NewTradeupService(tr TradeupRepository, w chan Winnings, logger LogService) TradeupService {
 	return &tradeupService{
-		storage: tr, 
-		winnings: w, 
-		logger: logger,
+		storage:  tr,
+		winnings: w,
+		logger:   logger,
 	}
 }
 
@@ -84,7 +83,7 @@ func (ts *tradeupService) AddSkinToTradeup(tradeupID, invID, userID string) erro
 		ts.logger.Info("max skins reached", "contribution", contribution)
 		return ErrMaxContribution
 	}
-	
+
 	err = ts.storage.AddSkinToTradeup(tradeupID, invID)
 	if err != nil {
 		return err
@@ -136,7 +135,7 @@ func (ts *tradeupService) RemoveSkinFromTradeup(tradeupID, invID, userID string)
 // Get tradeups with status waiting that have an expired stop time.
 // Decide winner and give winner new skin.
 func (ts *tradeupService) ProcessWinners() {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(time.Minute)
 	for range ticker.C {
 		expired, err := ts.storage.GetExpired()
 		if err != nil {
@@ -175,7 +174,7 @@ func (ts *tradeupService) ProcessWinners() {
 
 			winning := Winnings{
 				Winner: winner,
-				Item: newItem,
+				Item:   newItem,
 			}
 
 			ts.winnings <- winning
@@ -185,7 +184,7 @@ func (ts *tradeupService) ProcessWinners() {
 }
 
 func (ts *tradeupService) MaintainTradeupCount() {
-	ticker := time.NewTicker(4 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	for range ticker.C {
 		ts.logger.Info("maintaining tradeup count")
 		err := ts.storage.MaintainTradeupCount()
