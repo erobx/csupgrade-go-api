@@ -23,6 +23,11 @@ type User struct {
 	CreatedAt 			time.Time 	`json:"createdAt"`
 }
 
+type Player struct {
+    Username    string `json:"username"`
+    AvatarSrc   string `json:"avatarSrc"`
+}
+
 type Inventory struct {
     UserID  string  `json:"userId"`
     Items   []Item  `json:"items"`
@@ -42,7 +47,7 @@ type Tradeup struct {
 	StopTime 	time.Time 	`json:"stopTime"`
 	Mode		string		`json:"mode"` // Battle, Team, FFA
     Items   	[]Item  	`json:"items"`
-	Players 	[]User		`json:"players"`
+	Players 	[]Player    `json:"players"`
 }
 
 type Skin struct {
