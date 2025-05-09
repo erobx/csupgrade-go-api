@@ -52,7 +52,7 @@ func (s *storage) GetTradeupByID(tradeupID string) (api.Tradeup, error) {
 	}()
 
 	q := `
-	select * from tradeups where id=$1
+	select id, rarity, current_status, stop_time, mode from tradeups where id=$1
 	`
 	err = s.db.QueryRow(context.Background(), q, tradeupID).Scan(&tradeup.ID,
 		&tradeup.Rarity, &tradeup.Status, &tradeup.StopTime, &tradeup.Mode)
