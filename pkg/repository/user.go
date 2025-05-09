@@ -63,7 +63,7 @@ func (s *storage) GetInventory(userID string) (api.Inventory, error) {
 		i.was_won, i.created_at, i.visible, s.name, s.rarity, s.collection, s.image_key
 	from inventory i
 	join skins s on s.id = i.skin_id
-		where i.user_id = $1 and i.was_used = false
+		where i.user_id = $1 and i.was_used = false and i.visible = true
 	`
 	rows, err := s.db.Query(context.Background(), q, userID)
 	if err != nil {
@@ -99,16 +99,6 @@ func (s *storage) CheckSkinOwnership(invID, userID string) (bool, error) {
 
 	return isOwned, err
 }
-
-/*
-type Row = {
-  tradeupId: string;
-  rarity: string;
-  status: string;
-  skins: Skin[];
-  value: number;
-}
-*/
 
 func (s *storage) GetRecentTradeups(userID string) ([]api.RecentTradeup, error) {
 	var recentTradeups []api.RecentTradeup

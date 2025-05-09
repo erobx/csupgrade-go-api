@@ -12,7 +12,7 @@ func (s *storage) GetAllTradeups() ([]api.Tradeup, error) {
 	var tradeups []api.Tradeup
 	var ids []string
 
-	q := `select id from tradeups where current_status = 'Active' or current_status = 'Waiting'`
+	q := `select id from tradeups where current_status <> 'Completed'`
 	rows, err := s.db.Query(context.Background(), q)
 	if err != nil {
 		return tradeups, nil
@@ -72,12 +72,11 @@ func (s *storage) GetTradeupByID(tradeupID string) (api.Tradeup, error) {
 	q = `
 	select i.id, i.skin_id, i.wear_str, i.wear_num, i.price, i.is_stattrak, 
 		u.username, u.avatar_key, s.name, s.rarity, s.collection, s.image_key
-	from tradeups t
-	join tradeups_skins ts on ts.tradeup_id = t.id
+	from tradeups_skins ts
 	join inventory i on i.id = ts.inv_id
 	join users u on u.id = i.user_id
 	join skins s on s.id = i.skin_id
-	where t.id=$1
+	where ts.tradeup_id=$1
 	`
 	rows, err := s.db.Query(context.Background(), q, tradeupID)
 	if err != nil {
