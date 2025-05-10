@@ -234,6 +234,8 @@ func (s *Server) handleWebSocket(c *websocket.Conn) {
 		SubscribedID:  "",
 	}
 
+    s.logger.Info("New connection from", client.UserID)
+
 	s.Lock()
 	s.clients[userID] = client
 	s.Unlock()
