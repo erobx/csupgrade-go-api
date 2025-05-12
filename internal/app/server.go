@@ -150,7 +150,7 @@ func (s *Server) broadcastState() {
 				s.tradeupCache[client.SubscribedID] = t
 				s.lastFetchTime = time.Now()
 
-				s.logger.Info("sending updated tradeup")
+				s.logger.Info("sending updated tradeup to", "user", client.UserID)
 				client.Conn.WriteJSON(fiber.Map{"event": "sync_tradeup", "tradeup": t})
 			}
 		}
