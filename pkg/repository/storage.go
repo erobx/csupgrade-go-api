@@ -69,13 +69,13 @@ func (s *storage) BuyCrate(crateID, userID string, amount int) (float64, []api.I
 	q := `
 	with updated as (
 		update users
-		set balance = balance - ((select cost from crates where id=$1) * $2)
-		where id = (select id from users where id=$3)
-		and balance >= ((select cost from crates where id=$1) * $2)
+		set balance = balance - ((select cost from crates where id=$1))
+		where id = (select id from users where id=$2)
+		and balance >= ((select cost from crates where id=$1))
 		returning balance
 	) select * from updated
 	`
-	err = tx.QueryRow(context.Background(), q, crateID, amount, userID).Scan(&updatedBalance)
+	err = tx.QueryRow(context.Background(), q, crateID, userID).Scan(&updatedBalance)
 	if err != nil {
 		tx.Rollback(context.Background())
 		return updatedBalance, addedItems, errors.New("insufficent funds")

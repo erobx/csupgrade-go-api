@@ -1,5 +1,5 @@
 services:
-  server:
+  csupgrade-api:
     container_name: cs-api
     build:
       context: .
@@ -13,3 +13,4 @@ services:
       - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
       - NEON_URL=${NEON_URL}
       - SKINS_CDN_URL=${SKINS_CDN_URL}
+      - GOFLAGS=-buildvcs=false

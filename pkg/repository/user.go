@@ -63,7 +63,7 @@ func (s *storage) GetInventory(userID string) (api.Inventory, error) {
 		i.was_won, i.created_at, i.visible, s.name, s.rarity, s.collection, s.image_key
 	from inventory i
 	join skins s on s.id = i.skin_id
-		where i.user_id = $1 and i.was_used = false and i.visible = true
+		where i.user_id = $1 and i.was_used = false
 	`
 	rows, err := s.db.Query(context.Background(), q, userID)
 	if err != nil {

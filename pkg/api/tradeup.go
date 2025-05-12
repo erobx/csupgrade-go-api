@@ -178,8 +178,8 @@ func (ts *tradeupService) ProcessWinners() {
 			}
 
 			ts.winnings <- winning
+            ts.logger.Info("processed winner", "winner", winner)
 		}
-		ts.logger.Info("processed winners", "expired", expired)
 	}
 }
 
