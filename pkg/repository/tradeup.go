@@ -93,7 +93,8 @@ func (s *storage) GetTradeupByID(tradeupID string) (api.Tradeup, error) {
 		var imageKey string
 
 		err := rows.Scan(&item.InvID, &skin.ID, &skin.Wear, &skin.Float, &skin.Price,
-			&skin.IsStatTrak, &player.Username, &avatarKey, &skin.Name, &skin.Rarity, &skin.Collection, &imageKey)
+			&skin.IsStatTrak, &player.Username, &avatarKey, &skin.Name, &skin.Rarity, 
+            &skin.Collection, &imageKey)
 		if err != nil {
 			tx.Rollback(context.Background())
 			return tradeup, err
