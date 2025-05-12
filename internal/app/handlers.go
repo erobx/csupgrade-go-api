@@ -34,6 +34,12 @@ func (s *Server) register() fiber.Handler {
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
 
+        inv, err := s.userService.GetInventory(userID)
+        if err != nil {
+            s.logger.Error("failed to load inventory", "user", userID)
+            return c.SendStatus(fiber.StatusInternalServerError)
+        }
+
 		claims := jwt.MapClaims{
 			"id":                  userID,
 			"email":               user.Email,
@@ -49,6 +55,7 @@ func (s *Server) register() fiber.Handler {
 
 		return c.JSON(fiber.Map{
 			"user": user,
+            "inventory": inv,
 			"jwt":  t,
 		})
 	}
