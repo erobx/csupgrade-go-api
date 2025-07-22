@@ -1,38 +1,41 @@
 package app
 
 import (
+	"context"
 	"crypto/rsa"
 	"encoding/json"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/erobx/csupgrade-go-api/pkg/api"
 	"github.com/gofiber/fiber/v2"
+	"github.com/valkey-io/valkey-go"
 )
 
 type Server struct {
-	sync.Mutex
-
-	addr       string
-	privateKey *rsa.PrivateKey
-	app        *fiber.App
-	validator  Validator
-
-	logger         api.LogService
-	userService    api.UserService
-	storeService   api.StoreService
-	tradeupService api.TradeupService
-
-	clients  map[string]*Client
-	winnings chan api.Winnings
-
-	tradeupCache  map[string]api.Tradeup
-	lastFetchTime time.Time
+	addr       		string
+	privateKey 		*rsa.PrivateKey
+	app        		*fiber.App
+	validator  		Validator
+	logger         	api.LogService
+	userService    	api.UserService
+	storeService   	api.StoreService
+	tradeupService 	api.TradeupService
+	wsManager		*WebSocketManager
+	valkeyClient	valkey.Client
+	winnings chan 	api.Winnings
 }
 
 func NewServer(addr string, privKey *rsa.PrivateKey, logger api.LogService, us api.UserService,
-	ss api.StoreService, ts api.TradeupService, w chan api.Winnings) *Server {
+	ss api.StoreService, ts api.TradeupService, w chan api.Winnings, valkeyUrl string) *Server {
+
+	valkeyClient, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{valkeyUrl}})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	wsManager := NewWebSocketManager(valkeyClient, logger)
+
 	s := &Server{
 		addr:           addr,
 		app:            fiber.New(),
@@ -42,9 +45,9 @@ func NewServer(addr string, privKey *rsa.PrivateKey, logger api.LogService, us a
 		userService:    us,
 		storeService:   ss,
 		tradeupService: ts,
-		clients:        make(map[string]*Client),
+		wsManager: 		wsManager,
+		valkeyClient: 	valkeyClient,
 		winnings:       w,
-		tradeupCache:   make(map[string]api.Tradeup),
 	}
 
 	s.UseMiddleware()
@@ -57,10 +60,12 @@ func NewServer(addr string, privKey *rsa.PrivateKey, logger api.LogService, us a
 }
 
 func (s *Server) Run() {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	go s.wsManager.Run()
+
+	ticker := time.NewTicker(1 * time.Second)
 	go func() {
 		for range ticker.C {
-			s.broadcastState()
+			s.publishTradeupUpdates()
 		}
 	}()
 
@@ -69,6 +74,23 @@ func (s *Server) Run() {
 	go s.notifyWinners()
 
 	log.Fatal(s.app.Listen(":" + s.addr))
+}
+
+func (s *Server) publishToValkey(channel string, data any) error {
+	ctx := context.Background()
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		s.logger.Error("failed to marshal data for valkey publish", "error", err)
+		return err
+	}
+
+	err = s.valkeyClient.Do(ctx, s.valkeyClient.B().Publish().Channel(channel).Message(string(jsonData)).Build()).Error()
+	if err != nil {
+		s.logger.Error("failed to publish to valkey", "channel", channel, "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *Server) handleSubscription(userID string, msg []byte) {
@@ -85,10 +107,10 @@ func (s *Server) handleSubscription(userID string, msg []byte) {
 
 	s.logger.Info("incoming from", "user", userID, "payload", payload)
 
-	s.Lock()
-	defer s.Unlock()
+	s.wsManager.Lock()
+	defer s.wsManager.Unlock()
 
-	client, exists := s.clients[userID]
+	client, exists := s.wsManager.clients[userID]
 	if !exists {
 		return
 	}
@@ -97,27 +119,27 @@ func (s *Server) handleSubscription(userID string, msg []byte) {
 	case "subscribe_all":
 		client.SubscribedAll = true
 		client.SubscribedID = ""
+
 		tradeups, err := s.tradeupService.GetAllTradeups()
 		if err != nil {
 			s.logger.Error("couldn't get tradeups", "error", err)
 			return
 		}
 
-		s.lastFetchTime = time.Now()
-
 		client.Conn.WriteJSON(fiber.Map{"event": "sync_state", "tradeups": tradeups})
+
 	case "subscribe_one":
 		client.SubscribedAll = false
 		client.SubscribedID = payload.TradeupID
+
 		t, err := s.tradeupService.GetTradeupByID(payload.TradeupID)
 		if err != nil {
 			s.logger.Error("couldn't get tradeup", "tradeupID", payload.TradeupID, "error", err)
 			return
 		}
 
-		s.tradeupCache[payload.TradeupID] = t
-
 		client.Conn.WriteJSON(fiber.Map{"event": "sync_tradeup", "tradeup": t})
+
 	case "unsubscribe":
 		client.SubscribedAll = false
 		client.SubscribedID = ""
@@ -125,53 +147,55 @@ func (s *Server) handleSubscription(userID string, msg []byte) {
 	}
 }
 
-func (s *Server) broadcastState() {
-	s.Lock()
-	defer s.Unlock()
-
-	for _, client := range s.clients {
-		if client.SubscribedAll {
-			tradeups, err := s.tradeupService.GetAllTradeups()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			client.Conn.WriteJSON(fiber.Map{"event": "sync_state", "tradeups": tradeups})
-		} else if client.SubscribedID != "" {
-			t, err := s.tradeupService.GetTradeupByID(client.SubscribedID)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-
-			cachedTradeup, exists := s.tradeupCache[client.SubscribedID]
-
-			if !exists || !TradeupEqual(t, cachedTradeup) {
-				s.tradeupCache[client.SubscribedID] = t
-				s.lastFetchTime = time.Now()
-
-				client.Conn.WriteJSON(fiber.Map{"event": "sync_tradeup", "tradeup": t})
-			}
-		}
+func (s *Server) publishTradeupUpdates() {
+	tradeups, err := s.tradeupService.GetAllTradeups()
+	if err != nil {
+		s.logger.Error("couldn't get tradeups", "error", err)
+		return
 	}
+
+	s.publishToValkey("tradeup_updates", fiber.Map{
+		"event": "tradeup_updates",
+		"tradeups": tradeups,
+	})
+}
+
+func (s *Server) publishSingleTradeupUpdate(tradeupID string) {
+	tradeup, err := s.tradeupService.GetTradeupByID(tradeupID)
+	if err != nil {
+		s.logger.Error("couldn't get tradeup for update", "tradeupID", tradeupID, "error", err)
+		return
+	}
+
+	s.publishToValkey("single_tradeup_updates", fiber.Map{
+		"event": "single_tradeup_updates",
+		"tradeupID": tradeupID,
+		"tradeup": tradeup,
+	})
 }
 
 func (s *Server) notifyWinners() {
 	for {
 		select {
 		case winning := <-s.winnings:
-			// client currently has a connection, notify them
-			s.Lock()
-			if client, ok := s.clients[winning.Winner]; ok {
+			// Publish winner notification to Valkey for distribution
+			s.publishToValkey("tradeup_winners", api.Winnings{
+				Winner: winning.Winner,
+				Item: winning.Item,
+			})
+
+			// Handle locally connected client
+			s.wsManager.RLock()
+			if client, ok := s.wsManager.clients[winning.Winner]; ok {
 				client.Conn.WriteJSON(fiber.Map{
-					"event":       "tradeup_winner",
-					"userId":      client.UserID,
+					"event": "tradeup_winner",
+					"userID": client.UserID,
 					"winningItem": winning.Item,
 				})
 			} else {
 				s.logger.Info("winner not connected", "winner", winning.Winner)
 			}
-			s.Unlock()
+			s.wsManager.RUnlock()
 		}
 	}
 }
