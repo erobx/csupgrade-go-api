@@ -3,9 +3,9 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
+	"github.com/erobx/csupgrade-go-api/internal/config"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -13,13 +13,8 @@ type Postgres struct {
 	db *pgxpool.Pool
 }
 
-func InitPostgres(ctx context.Context) (*Postgres, error) {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		return nil, fmt.Errorf("DATABASE_URL not set")
-	}
-
-	config, err := pgxpool.ParseConfig(dsn)
+func InitPostgres(ctx context.Context, cfg *config.Config) (*Postgres, error) {
+	config, err := pgxpool.ParseConfig(cfg.PostgresURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse db config: %w", err)
 	}
@@ -31,7 +26,7 @@ func InitPostgres(ctx context.Context) (*Postgres, error) {
 		return nil, fmt.Errorf("failed to connect to db: %w", err)
 	}
 
-	if pool.Ping(ctx) != nil {
+	if err := pool.Ping(ctx); err != nil {
 		return nil, fmt.Errorf("failed to communicate with db: %w", err)
 	}
 

@@ -1,6 +1,6 @@
 services:
   csupgrade-api:
-    container_name: cs-api
+    container_name: csupgrade-api
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,8 +9,30 @@ services:
       - .:/app
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      - RSA_PRIVATE_KEY=${RSA_PRIVATE_KEY}
-      - NEON_URL=${NEON_URL}
-      - SKINS_CDN_URL=${SKINS_CDN_URL}
       - GOFLAGS=-buildvcs=false
+    depends_on:
+      - db
+      - valkey
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: erob
+      POSTGRES_DB: csupgrade
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  valkey:
+    image: valkey/valkey:latest
+    container_name: valkey
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata: {}

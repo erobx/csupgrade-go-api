@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/erobx/csupgrade-go-api/internal/config"
 	"github.com/erobx/csupgrade-go-api/internal/db"
 	"github.com/erobx/csupgrade-go-api/internal/rest"
 	"github.com/erobx/csupgrade-go-api/internal/server"
@@ -22,13 +23,18 @@ import (
 func main() {
 	ctx := context.Background()
 
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
+
 	// DBs
-	postgres, err := db.InitPostgres(ctx)
+	postgres, err := db.InitPostgres(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}
 
-	valkey, err := db.InitValkey(ctx)
+	valkey, err := db.InitValkey(ctx, cfg)
 	if err != nil {
 		panic(err)
 	}

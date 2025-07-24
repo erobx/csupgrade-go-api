@@ -3,8 +3,8 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
 
+	"github.com/erobx/csupgrade-go-api/internal/config"
 	"github.com/valkey-io/valkey-go"
 )
 
@@ -12,8 +12,8 @@ type Valkey struct {
 	client valkey.Client
 }
 
-func InitValkey(ctx context.Context) (*Valkey, error) {
-	client, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{os.Getenv("VALKEY_URL")}})
+func InitValkey(ctx context.Context, cfg *config.Config) (*Valkey, error) {
+	client, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{cfg.ValkeyURL}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Valkey instance: %w", err)
 	}

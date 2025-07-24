@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log"
 
 	"github.com/erobx/csupgrade-go-api/internal/rest"
 	"github.com/erobx/csupgrade-go-api/internal/ws"
@@ -28,6 +29,7 @@ func NewServer(ctx context.Context, tHandler *rest.TradeupHandler, wsHandler *ws
 }
 
 func (s *Server) Start(addr string) error {
+	log.Println("Started server")
 	return s.app.Listen(addr)
 }
 
