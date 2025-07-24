@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 
+	"github.com/erobx/csupgrade-go-api/internal/model"
 	"github.com/erobx/csupgrade-go-api/internal/tradeup"
 	"github.com/gofiber/fiber/v2"
 )
@@ -18,7 +19,7 @@ func NewTradeupHandler(service *tradeup.Service) *TradeupHandler {
 func (h *TradeupHandler) AddItem(c *fiber.Ctx) error {
 	var req struct {
 		TradeupID string 	`json:"tradeup_id"`
-		Item tradeup.Item 	`json:"item"`	
+		Item model.Item 	`json:"item"`	
 	}
 
 	if err := c.BodyParser(&req); err != nil {

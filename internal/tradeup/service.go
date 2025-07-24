@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/erobx/csupgrade-go-api/internal/db"
+	"github.com/erobx/csupgrade-go-api/internal/model"
 )
 
 type Service struct {
@@ -15,7 +16,7 @@ func NewService(store db.Store) *Service {
 	return &Service{store: store}
 }
 
-func (s *Service) AddItemToTradeup(ctx context.Context, tradeupID, userID string, item Item) error {
+func (s *Service) AddItemToTradeup(ctx context.Context, tradeupID, userID string, item model.Item) error {
 	tradeup, err := s.store.GetTradeupByID(ctx, tradeupID)
 	if err != nil {
 		return err
