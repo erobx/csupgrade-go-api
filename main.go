@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -8,37 +9,65 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/erobx/csupgrade-go-api/internal/app"
-	"github.com/erobx/csupgrade-go-api/pkg/api"
-	"github.com/erobx/csupgrade-go-api/pkg/db"
-	"github.com/erobx/csupgrade-go-api/pkg/repository"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/erobx/csupgrade-go-api/internal/db"
+	"github.com/erobx/csupgrade-go-api/internal/rest"
+	"github.com/erobx/csupgrade-go-api/internal/server"
+	"github.com/erobx/csupgrade-go-api/internal/tradeup"
+	"github.com/erobx/csupgrade-go-api/internal/ws"
 )
 
 func main() {
-	db, err := db.CreateConnection()
+	ctx := context.Background()
+
+	// DBs
+	postgres, err := db.InitPostgres(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	valkey, err := db.InitValkey(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Stores
+	defaultStore := db.NewDefaultStore(postgres, valkey)
+
+	// Services
+	tradeupService := tradeup.NewService(defaultStore)
+	wsHub := ws.NewHub()
+
+	go wsHub.Run()
+
+	// Handlers
+	tradeupHandler := rest.NewTradeupHandler(tradeupService)
+	wsHandler := ws.NewHandler(wsHub)
+
+	server, err := server.NewServer(ctx, tradeupHandler, wsHandler)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
 
-	winnings := make(chan api.Winnings, 1)
+	server.SetupRoutes()
 
-	cdnUrl := os.Getenv("SKINS_CDN_URL")
-	storage := repository.NewStorage(db, cdnUrl)
-	logService := api.NewLogger()
-	userService := api.NewUserService(storage, logService)
-	storeService := api.NewStoreService(storage, logService)
-	tradeupService := api.NewTradeupService(storage, winnings, logService)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(os.Getenv("RSA_PRIVATE_KEY")))
-	if err != nil {
-		log.Fatalln(err)
+	go func() {
+		<-c
+		log.Println("Gracefull shutdown...")
+		if err := server.Shutdown(); err != nil {
+			log.Printf("Server shutdown error: %v", err)
+		}
+		os.Exit(0)
+	}()
+	
+	if err := server.Start(":8080"); err != nil {
+		log.Fatal("Failed to start server:", err)
 	}
-
-	server := app.NewServer("8080", privateKey, logService, userService, storeService, tradeupService, winnings)
-	server.Run()
 }
 
 func generate() {
