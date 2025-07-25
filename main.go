@@ -44,9 +44,9 @@ func main() {
 
 	// Services
 	tradeupService := tradeup.NewService(defaultStore)
-	wsHub := ws.NewHub()
+	wsHub := ws.NewHub(valkey)
 
-	go wsHub.Run()
+	go wsHub.Run(ctx)
 
 	// Handlers
 	tradeupHandler := rest.NewTradeupHandler(tradeupService)

@@ -1,7 +1,8 @@
 package ws
 
 import (
-	"bytes"
+	"encoding/json"
+	"log"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -23,16 +24,21 @@ type Client struct {
 	hub		*Hub
 	conn	*websocket.Conn
 	userID	string
-	send 	chan []byte
+	send 	chan ServerMessage
 }
 
-func NewClient(conn *websocket.Conn) *Client {
+func NewClient(hub *Hub, conn *websocket.Conn, userID string) *Client {
 	return &Client{
+		hub:  hub,
 		conn: conn,
-		send: make(chan []byte),
+		userID: userID,
+		send: make(chan ServerMessage),
 	}
 }
 
+// pumps messages from the websocket connection to the hub
+// messages from client to hub
+// read from client
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister <- c
@@ -41,18 +47,26 @@ func (c *Client) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	if c.conn == nil {
+		return
+	}
 	for {
-		_, message, err := c.conn.ReadMessage()
+		var message ClientMessage
+		err := c.conn.ReadJSON(&message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				// log error
+				log.Printf("unexpected error: %v", err)
 			}
 			break
 		}
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+		c.hub.incoming <- message
 	}
 }
 
+// pumps messages from the hub to the websocket connection
+// messages from hub to the client
+// write to client
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
@@ -61,6 +75,7 @@ func (c *Client) writePump() {
 	}()
 	for {
 		select {
+		// reads messages from the hub
 		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
@@ -69,18 +84,18 @@ func (c *Client) writePump() {
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := c.conn.NextWriter(websocket.BinaryMessage)
 			if err != nil {
 				return
 			}
-			w.Write(message)
+			w.Write(encodeServerMessage(message))
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := range n {
 				_ = i
 				w.Write(newline)
-				w.Write(<-c.send)
+				w.Write(encodeServerMessage(<-c.send))
 			}
 
 			if err := w.Close(); err != nil {
@@ -93,4 +108,13 @@ func (c *Client) writePump() {
 			}
 		}
 	}
+}
+
+func encodeServerMessage(msg ServerMessage) []byte {
+	jsonBytes, err := json.Marshal(msg)
+	if err != nil {
+
+		return nil
+	}
+	return jsonBytes
 }

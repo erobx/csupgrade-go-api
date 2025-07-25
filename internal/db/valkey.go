@@ -29,3 +29,15 @@ func InitValkey(ctx context.Context, cfg *config.Config) (*Valkey, error) {
 func (v *Valkey) Close() {
 	v.client.Close()
 }
+
+func (v *Valkey) Subscribe(ctx context.Context, channels []string, handler func(valkey.PubSubMessage)) error {
+	cmd := v.client.B().Subscribe().Channel(channels...).Build()
+	return v.client.Receive(ctx, cmd, func(msg valkey.PubSubMessage) {
+		go handler(msg)
+	})
+}
+
+func (v *Valkey) Publish(ctx context.Context, channel string, payload []byte) error {
+	cmd := v.client.B().Publish().Channel(channel).Message(string(payload)).Build()
+	return v.client.Do(ctx, cmd).Error()
+}

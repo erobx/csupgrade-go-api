@@ -59,6 +59,7 @@ func (s *Server) setupWebSocketRoutes() {
 			c.Locals("allowed", true)
 			return c.Next()
 		}
+		log.Println("upgrade NOT allowed, rejecting")
 		return fiber.ErrUpgradeRequired
 	})
 
