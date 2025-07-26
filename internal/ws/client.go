@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"encoding/json"
 	"log"
 	"time"
 
@@ -32,7 +31,7 @@ func NewClient(hub *Hub, conn *websocket.Conn, userID string) *Client {
 		hub:  hub,
 		conn: conn,
 		userID: userID,
-		send: make(chan ServerMessage),
+		send: make(chan ServerMessage, 512),
 	}
 }
 
@@ -88,14 +87,15 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(encodeServerMessage(message))
+			w.Write(message.Encode())
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
 			for i := range n {
 				_ = i
 				w.Write(newline)
-				w.Write(encodeServerMessage(<-c.send))
+				nextMsg := <-c.send
+				w.Write(nextMsg.Encode())
 			}
 
 			if err := w.Close(); err != nil {
@@ -108,13 +108,4 @@ func (c *Client) writePump() {
 			}
 		}
 	}
-}
-
-func encodeServerMessage(msg ServerMessage) []byte {
-	jsonBytes, err := json.Marshal(msg)
-	if err != nil {
-
-		return nil
-	}
-	return jsonBytes
 }
